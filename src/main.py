@@ -7,25 +7,29 @@ sys.path.append(str(root_dir))
 
 from typing import Optional
 import asyncio
+from rich.console import Console
 
 from src.core.browser_manager import AnonymousBrowser
 
+console = Console()
 
 async def main():
-    # Create browser instance (using latest version)
     browser: Optional[AnonymousBrowser] = None
     try:
         browser = AnonymousBrowser()
         await browser.launch()
-
-        # Navigate to a website
+        
+        # Navigate and inject config display
         await browser.page.goto("https://example.com")
-
-        # Wait for user input before closing
-        input("Press Enter to close the browser...")
-
+        await browser.inject_config_display()
+        
+        console.print("\n[bold green]Browser launched successfully!")
+        console.print("[italic]The current configuration is visible in both terminal and browser")
+        console.print("[italic]Move mouse over the bottom-right corner to see browser config")
+        
+        input("\nPress Enter to close the browser...")
+    
     finally:
-        # Ensure browser is properly closed even if an error occurs
         if browser:
             await browser.close()
 
