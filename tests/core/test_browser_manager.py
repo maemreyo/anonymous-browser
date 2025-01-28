@@ -8,14 +8,20 @@ class TestAnonymousBrowser:
     async def browser(self):
         browser = AnonymousBrowser()
         try:
+            await browser.launch()
             yield browser
         finally:
             await browser.close()
 
     @pytest.mark.asyncio
-    async def test_browser_launch(self, browser):
+    async def test_browser_launch(self):
         """Test browser launch with fingerprint injection"""
+        browser = AnonymousBrowser()
         await browser.launch()
-        assert browser.browser is not None
-        assert browser.context is not None
-        assert browser.page is not None
+        
+        try:
+            assert browser.browser is not None
+            assert browser.context is not None
+            assert browser.page is not None
+        finally:
+            await browser.close()

@@ -1,10 +1,33 @@
 import pytest
 from src.core.fingerprint_generator import AnonymousFingerprint
+from typing import Dict, Any
+from src.config.constraints import DeviceType, OSFamily, BrowserFamily
 
 
 @pytest.fixture
 def fingerprint_generator():
     return AnonymousFingerprint()
+
+@pytest.fixture
+def sample_device_configs() -> Dict[str, Dict[str, Any]]:
+    return {
+        "desktop": {
+            "device_type": DeviceType.DESKTOP,
+            "os_family": OSFamily.WINDOWS,
+            "browser_family": BrowserFamily.CHROME,
+            "expected_memory": (8, 16, 32),
+            "expected_touch": (0,),
+            "screen_width_range": (1024, 3840)
+        },
+        "mobile": {
+            "device_type": DeviceType.MOBILE,
+            "os_family": OSFamily.ANDROID,
+            "browser_family": BrowserFamily.CHROME,
+            "expected_memory": (2, 4, 6, 8),
+            "expected_touch": (5, 10),
+            "screen_width_range": (320, 428)
+        }
+    }
 
 @pytest.fixture
 def mock_fingerprint_config():
