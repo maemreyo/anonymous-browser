@@ -30,7 +30,7 @@ class AnonymousBrowser:
 
             playwright = await async_playwright().start()
 
-            self.browser = await playwright.chromium.launch(headless=False)
+            self.browser = await playwright.firefox.launch(headless=False)
 
             # Create a new context with the injected fingerprint
             self.context = await AsyncNewContext(
