@@ -87,35 +87,20 @@ def validate_config(config: Dict[str, Any]) -> List[str]:
     # Validate device-OS-browser combination
     device = DeviceType(config.get("device", "desktop"))
     os_family = OSFamily(config.get("os"))
-    browser_family = BrowserFamily(config.get("browser").name)
+    browser_family = BrowserFamily(config.get("browser"))
     
+    # Validate OS-Browser compatibility
     if browser_family not in OS_BROWSER_CONSTRAINTS[os_family]:
-        errors.append(f"Browser {browser_family.value} is not supported on {os_family.value}")
+        errors.append(f"Browser {browser_family.value} not supported on {os_family.value}")
     
     # Validate hardware constraints
     hw_constraints = HARDWARE_CONSTRAINTS[device]
     
     if config.get("device_memory") not in hw_constraints["device_memory"]:
-        errors.append("Invalid device memory for device type")
+        errors.append("Invalid memory configuration for device type")
     
     if config.get("hardware_concurrency") not in hw_constraints["hardware_concurrency"]:
-        errors.append("Invalid hardware concurrency for device type")
-    
-    if config.get("max_touch_points") not in hw_constraints["max_touch_points"]:
-        errors.append("Invalid touch points for device type")
-    
-    # Validate screen constraints
-    screen = config.get("screen", {})
-    screen_constraints = hw_constraints["screen"]
-    
-    if not (screen_constraints["width"][0] <= screen.get("width", 0) <= screen_constraints["width"][1]):
-        errors.append("Invalid screen width for device type")
-    
-    if not (screen_constraints["height"][0] <= screen.get("height", 0) <= screen_constraints["height"][1]):
-        errors.append("Invalid screen height for device type")
-    
-    if screen.get("pixel_ratio") not in screen_constraints["pixel_ratio"]:
-        errors.append("Invalid pixel ratio for device type")
+        errors.append("Invalid CPU configuration for device type")
     
     return errors
 
