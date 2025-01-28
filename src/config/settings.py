@@ -1,6 +1,14 @@
 from typing import Dict, Any, Tuple, Union, Literal, List
 from browserforge.headers import Browser
 from browserforge.fingerprints import Screen, VideoCard
+from .constraints import (
+    validate_config,
+    generate_consistent_config,
+    DeviceType,
+    OSFamily,
+    HARDWARE_CONSTRAINTS,
+    OS_BROWSER_CONSTRAINTS
+)
 
 # Browser configuration with version ranges
 BROWSER_VERSIONS: Dict[str, Dict[str, int]] = {
@@ -141,4 +149,30 @@ BROWSER_CONFIG_V1: Dict[str, Any] = {
     "device": "desktop",
     "locale": ("en-US", "en-GB", "de-DE"),
     "http_version": 2,
-} 
+}
+
+def get_fingerprint_config(
+    device_type: DeviceType = DeviceType.DESKTOP,
+    os_family: OSFamily = OSFamily.WINDOWS
+) -> Dict[str, Any]:
+    """
+    Get a consistent fingerprint configuration for given device type and OS
+    
+    Args:
+        device_type: Type of device
+        os_family: Operating system family
+        
+    Returns:
+        Valid fingerprint configuration dictionary
+    """
+    base_config = generate_consistent_config(device_type, os_family)
+    
+    # Validate the configuration
+    errors = validate_config(base_config)
+    if errors:
+        raise ValueError(f"Invalid configuration: {', '.join(errors)}")
+    
+    return base_config
+
+# Example usage:
+# config = get_fingerprint_config(DeviceType.MOBILE, OSFamily.ANDROID) 
