@@ -15,10 +15,10 @@
 - Cross-browser compatibility validation
 
 ### 3. Detailed Customization
-- Fine-grained browser specifications control
-- Strict device type management
-- Advanced locale and HTTP version configuration
-- Custom header generation rules
+x Fine-grained browser specifications control
+x Strict device type management
+x Advanced locale and HTTP version configuration
+x Custom header generation rules
 
 ## Playwright Features
 
@@ -29,7 +29,7 @@
 - Resource sharing control
 
 ### 2. Advanced Evasion Techniques
-- Automatic network request handling
+x Automatic network request handling
 - Dialog automation
 - WebRTC/Canvas/WebGL mocking
 - Timezone and audio context spoofing
