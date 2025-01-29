@@ -1,0 +1,20 @@
+[
+  {
+    "server": "200.174.198.86:8888",
+    "protocol": "http",
+    "username": "",
+    "password": "",
+    "region": null,
+    "last_checked": "2025-01-29T11:34:49.023688",
+    "response_time": 1796.921
+  },
+  {
+    "server": "200.10.28.89:8083",
+    "protocol": "http",
+    "username": "",
+    "password": "",
+    "region": null,
+    "last_checked": "2025-01-29T11:34:52.607322",
+    "response_time": 5380.165
+  }
+]

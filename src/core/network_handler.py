@@ -200,27 +200,24 @@ class NetworkRequestHandler:
             self.block_images = block_images 
 
     async def setup_proxy(self, region: Optional[str] = None) -> bool:
-        """Setup and validate proxy for the network handler"""
+        """Setup and validate proxy"""
         try:
             proxy = await self.proxy_manager.get_working_proxy()
             if proxy:
-                self.proxy_manager.current_proxy = proxy
-                # Use standard logging instead of proxy_manager.logger
                 logger.info(f"Successfully setup proxy: {proxy.server}")
                 return True
-            else:
-                logger.warning("Failed to find working proxy")
-                return False
+            logger.warning("Failed to find working proxy")
+            return False
         except Exception as e:
             logger.error(f"Error setting up proxy: {e}")
             return False
 
+    def get_proxy_config(self) -> Optional[Dict[str, Any]]:
+        """Get current proxy configuration"""
+        if self.proxy_manager:
+            return self.proxy_manager.get_proxy_config()
+        return None
+
     async def rotate_proxy(self, region: Optional[str] = None) -> bool:
         """Rotate to a new working proxy"""
-        return await self.setup_proxy(region)
-
-    def get_proxy_config(self) -> Optional[Dict]:
-        """Get current proxy configuration for Playwright"""
-        if self.proxy_manager.current_proxy:
-            return self.proxy_manager.current_proxy.to_dict()
-        return None 
+        return await self.setup_proxy(region) 

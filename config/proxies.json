@@ -1,0 +1,452 @@
+[
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "12377",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "23.122.184.9",
+    "port": "8888",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "165.225.72.38",
+    "port": "11211",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.227.227",
+    "port": "11067",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "168.234.75.168",
+    "port": "80",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "160.86.242.23",
+    "port": "8080",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "74.255.219.229",
+    "port": "3129",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "6563",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "185.72.40.30",
+    "port": "8080",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.227.226",
+    "port": "12465",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.90",
+    "port": "25145",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "200.174.198.86",
+    "port": "8888",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "200.10.28.89",
+    "port": "8083",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.171",
+    "port": "33019",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "117.1.111.61",
+    "port": "10008",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "9563",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.227.228",
+    "port": "26525",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.93",
+    "port": "25821",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "socks5"
+    ],
+    "ip": "185.231.204.77",
+    "port": "1080",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "31353",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "37.143.129.242",
+    "port": "42146",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "37.143.129.242",
+    "port": "42164",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "59.55.254.76",
+    "port": "8118",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.227.230",
+    "port": "23855",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.236.20",
+    "port": "9957",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.173",
+    "port": "13733",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.90",
+    "port": "20865",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.250",
+    "port": "30711",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "1263",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "12179",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "20493",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "6165",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "11943",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "socks5"
+    ],
+    "ip": "178.255.44.60",
+    "port": "9700",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "12769",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "115.236.144.234",
+    "port": "3128",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "19017",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "socks5"
+    ],
+    "ip": "103.101.125.18",
+    "port": "28062",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "128.140.113.110",
+    "port": "8080",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "148.72.169.225",
+    "port": "30119",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "22515",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "178.48.68.61",
+    "port": "18080",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.90",
+    "port": "8759",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "22603",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.164.178",
+    "port": "16629",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "67.43.228.253",
+    "port": "3181",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "60.217.33.47",
+    "port": "9999",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "72.10.160.90",
+    "port": "15863",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "http"
+    ],
+    "ip": "190.221.139.22",
+    "port": "3128",
+    "username": "",
+    "password": ""
+  },
+  {
+    "protocol": [
+      "socks5"
+    ],
+    "ip": "51.89.21.99",
+    "port": "63199",
+    "username": "",
+    "password": ""
+  }
+]

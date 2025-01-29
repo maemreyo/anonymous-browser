@@ -2,6 +2,10 @@ from enum import Enum
 from typing import Dict, List, Tuple, Any, Optional, Union
 from dataclasses import dataclass
 from browserforge.headers import Browser, HeaderGenerator
+from .browser_specs import BrowserFamily
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class HeaderRule:
@@ -75,7 +79,20 @@ class HeaderRuleManager:
     }
 
     def __init__(self):
-        self.header_generator = HeaderGenerator()
+        self.base_headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+        }
 
     def _get_browser_rules(self, browser: str, version: int) -> List[HeaderRule]:
         """Get applicable header rules for browser and version"""
@@ -101,44 +118,45 @@ class HeaderRuleManager:
                 headers[name] = values[0]  # Use first value as default
         return headers
 
-    def generate_headers(
-        self,
-        browser: Union[str, Browser],
-        version: Optional[int] = None,
-        include_security: bool = True
-    ) -> Dict[str, str]:
-        """Generate headers with custom rules"""
+    def generate_headers(self, browser: BrowserFamily, version: Optional[int] = None) -> Dict[str, str]:
+        """Generate headers based on browser and version"""
         try:
-            # Get browser name and version
-            if isinstance(browser, Browser):
-                browser_name = browser.name
-                version = version or browser.max_version
+            base_headers = self.base_headers.copy()
+            
+            # Generate User-Agent based on browser family
+            if browser == BrowserFamily.FIREFOX:
+                user_agent = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0"
+                base_headers.update({
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'TE': 'trailers'
+                })
+            
+            elif browser == BrowserFamily.CHROME:
+                user_agent = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36"
+                base_headers.update({
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'sec-ch-ua': f'"Chromium";v="{version}", "Google Chrome";v="{version}"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"'
+                })
+            
             else:
-                browser_name = browser
-                version = version or 100  # Default version if not specified
+                raise ValueError(f"Unsupported browser family: {browser}")
+
+            # Set User-Agent
+            base_headers['User-Agent'] = user_agent
             
-            # Get base headers from BrowserForge
-            base_headers = self.header_generator.generate(
-                browser=browser_name,
-                strict=False
-            )
-            
-            # Get applicable rules
-            rules = self._get_browser_rules(browser_name, version)
-            
-            # Apply custom rules
-            for rule in rules:
-                if rule.required or (not rule.required and rule.weight >= 0.5):
-                    if isinstance(rule.value, list):
-                        base_headers[rule.name] = rule.value[0]
-                    else:
-                        base_headers[rule.name] = rule.value
-            
-            # Apply security headers if requested
-            if include_security:
-                base_headers = self._apply_security_headers(base_headers, browser_name)
-            
+            logger.debug(f"Generated headers for {browser.value} v{version}")
             return base_headers
-            
+
         except Exception as e:
-            raise ValueError(f"Failed to generate headers: {str(e)}") 
+            logger.error(f"Failed to generate headers: {e}")
+            raise ValueError(f"Failed to generate headers: {str(e)}")
+
+    def _get_browser_version(self, browser: BrowserFamily, version: Optional[int] = None) -> int:
+        """Get appropriate browser version"""
+        default_versions = {
+            BrowserFamily.FIREFOX: 115,
+            BrowserFamily.CHROME: 120
+        }
+        return version or default_versions.get(browser, 115) 
