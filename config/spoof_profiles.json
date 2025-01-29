@@ -1,0 +1,548 @@
+{
+  "desktop": [
+    {
+      "name": "desktop_0",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "en-GB",
+        "geo_location": {
+          "latitude": 51.4528,
+          "longitude": -0.1764
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 6,
+        "latency": 0.013
+      }
+    },
+    {
+      "name": "desktop_1",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Shanghai",
+        "locale": "ko-KR",
+        "geo_location": {
+          "latitude": 31.2732,
+          "longitude": 121.4064
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 2,
+        "latency": 0.013
+      }
+    },
+    {
+      "name": "desktop_2",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "es-MX",
+        "geo_location": {
+          "latitude": 40.6305,
+          "longitude": -74.0982
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 6,
+        "latency": 0.006
+      }
+    },
+    {
+      "name": "desktop_3",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/Paris",
+        "locale": "nl-NL",
+        "geo_location": {
+          "latitude": 48.7995,
+          "longitude": 2.3756
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 1,
+        "latency": 0.005
+      }
+    },
+    {
+      "name": "desktop_4",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "fr-FR",
+        "geo_location": {
+          "latitude": 51.4892,
+          "longitude": -0.1575
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 1,
+        "latency": 0.001
+      }
+    },
+    {
+      "name": "desktop_5",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Dubai",
+        "locale": "ar-AE",
+        "geo_location": {
+          "latitude": 25.1454,
+          "longitude": 55.2408
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 1,
+        "latency": 0.013
+      }
+    },
+    {
+      "name": "desktop_6",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Seoul",
+        "locale": "ar-AE",
+        "geo_location": {
+          "latitude": 37.5956,
+          "longitude": 126.9674
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 2,
+        "latency": 0.007
+      }
+    },
+    {
+      "name": "desktop_7",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "fr-FR",
+        "geo_location": {
+          "latitude": 51.5046,
+          "longitude": -0.1153
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 2,
+        "latency": 0.004
+      }
+    },
+    {
+      "name": "desktop_8",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "nl-NL",
+        "geo_location": {
+          "latitude": 51.4096,
+          "longitude": -0.0343
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 1,
+        "latency": 0.005
+      }
+    },
+    {
+      "name": "desktop_9",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Dubai",
+        "locale": "zh-TW",
+        "geo_location": {
+          "latitude": 25.2211,
+          "longitude": 55.3502
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 4,
+        "latency": 0.005
+      }
+    }
+  ],
+  "mobile": [
+    {
+      "name": "mobile_0",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "en-CA",
+        "geo_location": {
+          "latitude": 40.7764,
+          "longitude": -74.0944
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 6,
+        "latency": 0.007
+      }
+    },
+    {
+      "name": "mobile_1",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "de-DE",
+        "geo_location": {
+          "latitude": 51.5915,
+          "longitude": -0.2258
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 4,
+        "latency": 0.005
+      }
+    },
+    {
+      "name": "mobile_2",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/Berlin",
+        "locale": "es-ES",
+        "geo_location": {
+          "latitude": 52.4705,
+          "longitude": 13.449
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 6,
+        "latency": 0.009
+      }
+    },
+    {
+      "name": "mobile_3",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Tokyo",
+        "locale": "ar-AE",
+        "geo_location": {
+          "latitude": 35.6901,
+          "longitude": 139.7469
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 1,
+        "latency": 0.003
+      }
+    },
+    {
+      "name": "mobile_4",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "en-CA",
+        "geo_location": {
+          "latitude": 40.6279,
+          "longitude": -74.0989
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 4,
+        "latency": 0.002
+      }
+    },
+    {
+      "name": "mobile_5",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "ru-RU",
+        "geo_location": {
+          "latitude": 51.5648,
+          "longitude": -0.2006
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 4,
+        "latency": 0.002
+      }
+    },
+    {
+      "name": "mobile_6",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "nl-NL",
+        "geo_location": {
+          "latitude": 51.4665,
+          "longitude": -0.0386
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 6,
+        "latency": 0.01
+      }
+    },
+    {
+      "name": "mobile_7",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "en-US",
+        "geo_location": {
+          "latitude": 40.6482,
+          "longitude": -74.0118
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 4,
+        "latency": 0.002
+      }
+    },
+    {
+      "name": "mobile_8",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Shanghai",
+        "locale": "ar-AE",
+        "geo_location": {
+          "latitude": 31.3085,
+          "longitude": 121.3739
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 1,
+        "latency": 0.009
+      }
+    },
+    {
+      "name": "mobile_9",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/Paris",
+        "locale": "en-GB",
+        "geo_location": {
+          "latitude": 48.8094,
+          "longitude": 2.3035
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 2,
+        "latency": 0.009
+      }
+    }
+  ],
+  "tablet": [
+    {
+      "name": "tablet_0",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Australia/Sydney",
+        "locale": "en-AU",
+        "geo_location": {
+          "latitude": -33.9031,
+          "longitude": 151.1985
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 6,
+        "latency": 0.01
+      }
+    },
+    {
+      "name": "tablet_1",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/Amsterdam",
+        "locale": "nl-NL",
+        "geo_location": {
+          "latitude": 52.2851,
+          "longitude": 5.0015
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 1,
+        "latency": 0.003
+      }
+    },
+    {
+      "name": "tablet_2",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "en-CA",
+        "geo_location": {
+          "latitude": 40.7268,
+          "longitude": -74.0772
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 6,
+        "latency": 0.013
+      }
+    },
+    {
+      "name": "tablet_3",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/Moscow",
+        "locale": "en-GB",
+        "geo_location": {
+          "latitude": 55.842,
+          "longitude": 37.6469
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 6,
+        "latency": 0.005
+      }
+    },
+    {
+      "name": "tablet_4",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Tokyo",
+        "locale": "zh-HK",
+        "geo_location": {
+          "latitude": 35.7658,
+          "longitude": 139.7164
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 1,
+        "latency": 0.007
+      }
+    },
+    {
+      "name": "tablet_5",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Hong_Kong",
+        "locale": "ko-KR",
+        "geo_location": {
+          "latitude": 22.2834,
+          "longitude": 114.153
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 96000,
+        "channel_count": 1,
+        "latency": 0.002
+      }
+    },
+    {
+      "name": "tablet_6",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "fr-FR",
+        "geo_location": {
+          "latitude": 51.4153,
+          "longitude": -0.2105
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 4,
+        "latency": 0.014
+      }
+    },
+    {
+      "name": "tablet_7",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "America/New_York",
+        "locale": "en-CA",
+        "geo_location": {
+          "latitude": 40.6884,
+          "longitude": -74.0684
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 4,
+        "latency": 0.001
+      }
+    },
+    {
+      "name": "tablet_8",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Asia/Seoul",
+        "locale": "ko-KR",
+        "geo_location": {
+          "latitude": 37.5119,
+          "longitude": 127.0658
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 44100,
+        "channel_count": 2,
+        "latency": 0.008
+      }
+    },
+    {
+      "name": "tablet_9",
+      "timezone": {
+        "enabled": true,
+        "timezone_id": "Europe/London",
+        "locale": "ru-RU",
+        "geo_location": {
+          "latitude": 51.5777,
+          "longitude": -0.0372
+        }
+      },
+      "audio": {
+        "enabled": true,
+        "sample_rate": 48000,
+        "channel_count": 2,
+        "latency": 0.007
+      }
+    }
+  ]
+}
