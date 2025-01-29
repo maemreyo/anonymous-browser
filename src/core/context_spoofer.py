@@ -125,6 +125,9 @@ class ContextSpoofer:
                     }};
                 """)
 
+            # Log configuration to console
+            await self.log_browser_config(context)
+            
             logger.info("Context spoofing setup complete")
 
         except Exception as e:
@@ -174,3 +177,115 @@ class ContextSpoofer:
             SpooferType.AUDIO.value: profile["audio"]
         }
         self._validate_configs() 
+
+    async def log_browser_config(self, context) -> None:
+        """Log all browser configurations to console panel in a simplified 2-column format"""
+        try:
+            await context.add_init_script("""
+                function getFlattenedConfig(obj, prefix = '') {
+                    let flattened = {};
+                    
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value === null || value === undefined) continue;
+                        
+                        if (typeof value === 'object' && !Array.isArray(value)) {
+                            const nested = getFlattenedConfig(value, `${prefix}${key}.`);
+                            Object.assign(flattened, nested);
+                        } else {
+                            const displayValue = Array.isArray(value) 
+                                ? `[${value.slice(0, 3).join(', ')}${value.length > 3 ? '...' : ''}]`
+                                : String(value);
+                            flattened[`${prefix}${key}`] = displayValue;
+                        }
+                    }
+                    
+                    return flattened;
+                }
+
+                function logBrowserConfig() {
+                    const config = {
+                        // Browser & System
+                        'User Agent': navigator.userAgent,
+                        'Platform': navigator.platform,
+                        'Language': navigator.language,
+                        'CPU Cores': navigator.hardwareConcurrency,
+                        'Memory': navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A',
+                        
+                        // Display
+                        'Screen Resolution': `${screen.width}x${screen.height}`,
+                        'Color Depth': `${screen.colorDepth}-bit`,
+                        'Window Size': `${window.innerWidth}x${window.innerHeight}`,
+                        'Device Pixel Ratio': window.devicePixelRatio,
+                        
+                        // Time & Location
+                        'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        'Locale': Intl.DateTimeFormat().resolvedOptions().locale,
+                        'Time Offset': `UTC${new Date().getTimezoneOffset() >= 0 ? '-' : '+'}${Math.abs(new Date().getTimezoneOffset()/60)}`,
+                        
+                        // Audio
+                        'Audio Sample Rate': (() => {
+                            try {
+                                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                                return `${ctx.sampleRate} Hz`;
+                            } catch (e) {
+                                return 'N/A';
+                            }
+                        })(),
+                        
+                        // WebGL
+                        'WebGL Renderer': (() => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                const gl = canvas.getContext('webgl');
+                                return gl.getParameter(gl.RENDERER);
+                            } catch (e) {
+                                return 'N/A';
+                            }
+                        })(),
+                        
+                        // Network
+                        'Network Info': (() => {
+                            const conn = navigator.connection;
+                            return conn ? `${conn.effectiveType || 'unknown'} (${conn.downlink} Mbps)` : 'N/A';
+                        })(),
+                        
+                        // Spoofed Settings
+                        'Spoofed Timezone': window.__SPOOF_CONFIG?.timezone?.timezone_id || 'None',
+                        'Spoofed Locale': window.__SPOOF_CONFIG?.timezone?.locale || 'None',
+                        'Spoofed Audio Rate': window.__SPOOF_CONFIG?.audio?.sample_rate 
+                            ? `${window.__SPOOF_CONFIG.audio.sample_rate} Hz` 
+                            : 'None'
+                    };
+
+                    console.log('\\n=== 🌐 Browser Configuration ===');
+                    console.log('══════════════════════════════════');
+                    
+                    const flatConfig = getFlattenedConfig(config);
+                    const maxKeyLength = Math.max(...Object.keys(flatConfig).map(key => key.length));
+                    
+                    for (const [key, value] of Object.entries(flatConfig)) {
+                        const paddedKey = key.padEnd(maxKeyLength);
+                        console.log(`${paddedKey} │ ${value}`);
+                    }
+                    
+                    console.log('══════════════════════════════════\\n');
+                }
+
+                // Store spoof config globally
+                window.__SPOOF_CONFIG = {
+                    timezone: %s,
+                    audio: %s
+                };
+
+                // Log the configuration
+                logBrowserConfig();
+            """ % (
+                json.dumps(self.spoof_configs["timezone"]),
+                json.dumps(self.spoof_configs["audio"])
+            ))
+
+            logger.info("Browser configuration logged to console panel")
+            
+        except Exception as e:
+            logger.error(f"Failed to log browser configuration: {str(e)}")
+            raise 
