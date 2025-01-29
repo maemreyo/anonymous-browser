@@ -22,8 +22,14 @@ class AnonymousFingerprint:
         
         self.fingerprint_generator = FingerprintGenerator(
             screen=self.screen,
-            strict=False,
-            mock_webrtc=True
+            strict=True,
+            mock_webrtc=True,
+            mock_plugins=True,
+            mock_canvas=True,
+            mock_webgl=True,
+            timezone_override=True,
+            audio_context=True,
+            client_rects=True
         )
     
     def generate(self) -> Dict[str, Any]:

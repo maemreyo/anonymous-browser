@@ -151,6 +151,29 @@ BROWSER_CONFIG_V1: Dict[str, Any] = {
     "http_version": 2,
 }
 
+# Add new evasion configuration
+EVASION_CONFIG: Dict[str, Any] = {
+    "stealth_mode": True,
+    "webgl_noise": True,
+    "canvas_noise": True,
+    "audio_noise": True,
+    "hardware_concurrency_noise": True,
+    "timezone_noise": True,
+    
+    # Additional evasion techniques
+    "navigator_overrides": {
+        "randomize_memory": True,
+        "randomize_cores": True,
+        "randomize_plugins": True
+    },
+    
+    "webgl_overrides": {
+        "noise_precision": "high",
+        "vendor_randomization": True,
+        "renderer_randomization": True
+    }
+}
+
 def get_fingerprint_config(
     device_type: DeviceType = DeviceType.DESKTOP,
     os_family: OSFamily = OSFamily.WINDOWS

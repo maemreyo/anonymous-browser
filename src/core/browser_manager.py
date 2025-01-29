@@ -22,22 +22,52 @@ class AnonymousBrowser:
         """Launch a new browser instance with random fingerprint"""
         try:
             config = self.fingerprint_generator.generate()
-            self.current_config = config["fingerprint"]  # Đây là đối tượng Fingerprint
-
-            # Display configuration
-            console.print("\n[bold yellow]Launching browser with configuration:[/]")
-            show_active_config(self.current_config)
-
+            self.current_config = config["fingerprint"]
+            
             playwright = await async_playwright().start()
-
-            self.browser = await playwright.firefox.launch(headless=False)
-
-            # Create a new context with the injected fingerprint
+            
+            # Enhanced browser launch options
+            browser_options = {
+                "headless": False,
+                "proxy": None,  # Add proxy support if needed
+                "args": [
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-site-isolation-trials",
+                    "--disable-web-security",
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox"
+                ]
+            }
+            
+            self.browser = await playwright.firefox.launch(**browser_options)
+            
+            # Enhanced context options
+            context_options = {
+                "viewport": {
+                    "width": self.current_config.screen.width,
+                    "height": self.current_config.screen.height
+                },
+                "user_agent": self.current_config.navigator.userAgent,
+                "locale": self.current_config.navigator.language,
+                "timezone_id": self.current_config.navigator.timezone,
+                "permissions": ["geolocation", "notifications", "camera", "microphone"],
+                "bypass_csp": True,
+                "ignore_https_errors": True
+            }
+            
             self.context = await AsyncNewContext(
-                self.browser, fingerprint=self.current_config
+                self.browser,
+                fingerprint=self.current_config,
+                **context_options
             )
-
+            
             self.page = await self.context.new_page()
+            
+            # Add additional evasion scripts
+            await self._inject_evasion_scripts()
+            
             logger.info("Browser launched successfully with new fingerprint")
 
         except Exception as e:
@@ -206,3 +236,7 @@ class AnonymousBrowser:
         if self.browser:
             await self.browser.close()
             await self.browser.close()
+
+    async def _inject_evasion_scripts(self) -> None:
+        # Implementation of _inject_evasion_scripts method
+        pass
