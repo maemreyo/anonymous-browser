@@ -75,7 +75,7 @@ class ContextSpoofer:
         try:
             # Setup proxy first
             if await self.network_handler.setup_proxy():
-                proxy_config = self.network_handler.get_proxy_config()
+                proxy_config = self.network_handler.proxy_manager.current_proxy.to_dict()
                 if proxy_config:
                     await context.route("**/*", lambda route: route.continue_(
                         proxy=proxy_config
@@ -167,7 +167,82 @@ class ContextSpoofer:
             # Update browser logging to include geolocation
             await self.log_browser_config(context)
             
-            logger.info("Context spoofing setup complete")
+            # Add script to show config in all new pages
+            await context.add_init_script("""
+                window.showBrowserConfig = async function() {
+                    try {
+                        // Get IP information
+                        const ipResponse = await fetch('https://api.ipify.org?format=json');
+                        const ipData = await ipResponse.json();
+                        
+                        // Get detailed IP info
+                        const infoResponse = await fetch('http://ip-api.com/json/' + ipData.ip);
+                        const locationData = await infoResponse.json();
+                        
+                        const config = {
+                            'Browser Info': {
+                                'User Agent': navigator.userAgent,
+                                'Platform': navigator.platform,
+                                'Language': navigator.language,
+                                'Cookies Enabled': navigator.cookieEnabled,
+                                'Do Not Track': navigator.doNotTrack
+                            },
+                            'Network': {
+                                'IP Address': ipData.ip,
+                                'Country': locationData.country,
+                                'Region': locationData.regionName,
+                                'City': locationData.city,
+                                'ISP': locationData.isp,
+                                'Proxy/VPN': locationData.proxy ? 'Yes' : 'No',
+                                'Connection Type': navigator.connection?.effectiveType || 'Unknown',
+                                'Downlink': navigator.connection?.downlink + ' Mbps' || 'Unknown'
+                            },
+                            'Screen & Hardware': {
+                                'Resolution': `${window.screen.width}x${window.screen.height}`,
+                                'Color Depth': window.screen.colorDepth + ' bits',
+                                'Device Pixel Ratio': window.devicePixelRatio,
+                                'Max Touch Points': navigator.maxTouchPoints
+                            },
+                            'Timezone & Location': {
+                                'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+                                'Timezone Offset': new Date().getTimezoneOffset(),
+                                'Locale': navigator.language,
+                                'Geolocation': window.__SPOOF_CONFIG?.geolocation || 'Not Set'
+                            },
+                            'Spoofing Status': {
+                                'Audio': window.__SPOOF_CONFIG?.audio?.enabled || false,
+                                'Timezone': window.__SPOOF_CONFIG?.timezone?.enabled || false,
+                                'Geolocation': window.__SPOOF_CONFIG?.geolocation?.enabled || false,
+                                'Proxy': window.__SPOOF_CONFIG?.proxy?.enabled || false
+                            }
+                        };
+
+                        console.clear();
+                        console.log('\\n=== 🌐 Browser & Network Configuration ===');
+                        console.log('══════════════════════════════════════════');
+                        
+                        for (const [category, items] of Object.entries(config)) {
+                            console.log(`\\n[${category}]`);
+                            const maxKeyLength = Math.max(...Object.keys(items).map(k => k.length));
+                            for (const [key, value] of Object.entries(items)) {
+                                console.log(`${key.padEnd(maxKeyLength)} │ ${value}`);
+                            }
+                        }
+                        
+                        console.log('══════════════════════════════════════════\\n');
+                    } catch (error) {
+                        console.error('Failed to fetch configuration:', error);
+                    }
+                };
+
+                // Show config on page load
+                showBrowserConfig();
+            """)
+
+            # Open IP check page in new tab
+            ip_check_page = await context.new_page()
+            await ip_check_page.goto('https://browserleaks.com/ip')
+            logger.info("Opened IP check page for verification")
 
         except Exception as e:
             logger.error(f"Failed to setup context spoofing: {str(e)}")
@@ -223,148 +298,13 @@ class ContextSpoofer:
         self._validate_configs()
 
     async def log_browser_config(self, context) -> None:
-        """Log all browser configurations to console panel"""
+        """Log all browser configurations to console"""
         try:
-            await context.add_init_script("""
-                function getFlattenedConfig(obj, prefix = '') {
-                    let flattened = {};
-                    
-                    for (const [key, value] of Object.entries(obj)) {
-                        if (value === null || value === undefined) continue;
-                        
-                        if (typeof value === 'object' && !Array.isArray(value)) {
-                            const nested = getFlattenedConfig(value, `${prefix}${key}.`);
-                            Object.assign(flattened, nested);
-                        } else {
-                            const displayValue = Array.isArray(value) 
-                                ? `[${value.slice(0, 3).join(', ')}${value.length > 3 ? '...' : ''}]`
-                                : String(value);
-                            flattened[`${prefix}${key}`] = displayValue;
-                        }
-                    }
-                    
-                    return flattened;
-                }
-
-                function logBrowserConfig() {
-                    const config = {
-                        // Browser & System
-                        'User Agent': navigator.userAgent,
-                        'Platform': navigator.platform,
-                        'Language': navigator.language,
-                        'CPU Cores': navigator.hardwareConcurrency,
-                        'Memory': navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A',
-                        
-                        // Display
-                        'Screen Resolution': `${screen.width}x${screen.height}`,
-                        'Color Depth': `${screen.colorDepth}-bit`,
-                        'Window Size': `${window.innerWidth}x${window.innerHeight}`,
-                        'Device Pixel Ratio': window.devicePixelRatio,
-                        
-                        // Time & Location
-                        'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        'Locale': Intl.DateTimeFormat().resolvedOptions().locale,
-                        'Time Offset': `UTC${new Date().getTimezoneOffset() >= 0 ? '-' : '+'}${Math.abs(new Date().getTimezoneOffset()/60)}`,
-                        
-                        // Audio
-                        'Audio Sample Rate': (() => {
-                            try {
-                                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                                return `${ctx.sampleRate} Hz`;
-                            } catch (e) {
-                                return 'N/A';
-                            }
-                        })(),
-                        
-                        // WebGL
-                        'WebGL Renderer': (() => {
-                            try {
-                                const canvas = document.createElement('canvas');
-                                const gl = canvas.getContext('webgl');
-                                return gl.getParameter(gl.RENDERER);
-                            } catch (e) {
-                                return 'N/A';
-                            }
-                        })(),
-                        
-                        // Network & Proxy
-                        'Network': {
-                            'IP Address': window.__SPOOF_CONFIG?.proxy?.ip || 'Direct',
-                            'Proxy Server': window.__SPOOF_CONFIG?.proxy?.server || 'None',
-                            'Proxy Protocol': window.__SPOOF_CONFIG?.proxy?.protocol || 'None',
-                            'Proxy Region': window.__SPOOF_CONFIG?.proxy?.region || 'Unknown',
-                            'Connection Type': navigator.connection?.effectiveType || 'Unknown',
-                            'Downlink Speed': navigator.connection?.downlink ? `${navigator.connection.downlink} Mbps` : 'Unknown',
-                            'RTT': navigator.connection?.rtt ? `${navigator.connection.rtt}ms` : 'Unknown'
-                        },
-                        
-                        // Spoofed Settings
-                        'Spoofed Timezone': window.__SPOOF_CONFIG?.timezone?.timezone_id || 'None',
-                        'Spoofed Locale': window.__SPOOF_CONFIG?.timezone?.locale || 'None',
-                        'Spoofed Audio Rate': window.__SPOOF_CONFIG?.audio?.sample_rate 
-                            ? `${window.__SPOOF_CONFIG.audio.sample_rate} Hz` 
-                            : 'None',
-                        
-                        // Add Geolocation section
-                        'Geolocation': {
-                            'Latitude': window.__SPOOF_CONFIG?.geolocation?.location?.latitude || 'None',
-                            'Longitude': window.__SPOOF_CONFIG?.geolocation?.location?.longitude || 'None',
-                            'Accuracy': window.__SPOOF_CONFIG?.geolocation?.location?.accuracy || 'None'
-                        }
-                    };
-
-                    console.log('\\n=== 🌐 Browser Configuration ===');
-                    console.log('══════════════════════════════════');
-                    
-                    const flatConfig = getFlattenedConfig(config);
-                    const maxKeyLength = Math.max(...Object.keys(flatConfig).map(key => key.length));
-                    
-                    // Group configs by category
-                    const categories = {
-                        'Browser': ['User Agent', 'Platform', 'Language'],
-                        'Network': ['IP Address', 'Proxy', 'Connection'],
-                        'Geolocation': ['Latitude', 'Longitude', 'Timezone'],
-                        'Hardware': ['CPU Cores', 'Memory', 'Screen'],
-                        'Spoofed': ['Spoofed Timezone', 'Spoofed Locale', 'Spoofed Audio']
-                    };
-
-                    for (const [category, keys] of Object.entries(categories)) {
-                        console.log(`\\n[${category}]`);
-                        for (const [key, value] of Object.entries(flatConfig)) {
-                            if (keys.some(k => key.includes(k))) {
-                                console.log(`${key.padEnd(maxKeyLength)} │ ${value}`);
-                            }
-                        }
-                    }
-                    
-                    console.log('══════════════════════════════════════════\\n');
-                }
-
-                // Store spoof config globally with proxy info
-                window.__SPOOF_CONFIG = {
-                    timezone: %s,
-                    audio: %s,
-                    geolocation: %s,
-                    proxy: %s
-                };
-
-                // Log the configuration
-                logBrowserConfig();
-            """ % (
-                json.dumps(self.spoof_configs[SpooferType.TIMEZONE.value]),
-                json.dumps(self.spoof_configs[SpooferType.AUDIO.value]),
-                json.dumps(self.spoof_configs[SpooferType.GEOLOCATION.value]),
-                json.dumps({
-                    "server": self.network_handler.current_proxy.server if self.network_handler.current_proxy else None,
-                    "protocol": self.network_handler.current_proxy.protocol.value if self.network_handler.current_proxy else None,
-                    "region": self.network_handler.current_proxy.region if self.network_handler.current_proxy else None,
-                    "ip": await self._get_current_ip(context) if self.network_handler.current_proxy else None
-                })
-            ))
-
+            page = await context.new_page()
+            await page.evaluate("showBrowserConfig()")
+            await page.close()
         except Exception as e:
             logger.error(f"Failed to log browser configuration: {str(e)}")
-            raise
 
     async def _get_current_ip(self, context) -> Optional[str]:
         """Get current IP address through proxy"""

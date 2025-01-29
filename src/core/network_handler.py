@@ -41,10 +41,9 @@ class NetworkRequestHandler:
         
         # Initialize proxy manager
         self.proxy_manager = proxy_manager or ProxyManager()
-        self.current_proxy = None
         
-        # Ensure proxy manager is initialized
-        asyncio.create_task(self._ensure_proxy_manager())
+        # Don't create task in init
+        self.proxy_initialized = False
         
         # Initialize default trackers to block if enabled
         if self.block_trackers:
@@ -52,8 +51,13 @@ class NetworkRequestHandler:
 
     async def _ensure_proxy_manager(self) -> None:
         """Ensure proxy manager is initialized with proxies"""
-        if not self.proxy_manager.proxies:
-            await self.proxy_manager.initialize()
+        if not self.proxy_initialized:
+            try:
+                await self.proxy_manager.initialize()
+                self.proxy_initialized = True
+            except Exception as e:
+                logger.error(f"Failed to initialize proxy manager: {e}")
+                self.proxy_initialized = False
 
     def _init_tracker_blocklist(self):
         """Initialize list of trackers to block"""
@@ -198,14 +202,11 @@ class NetworkRequestHandler:
     async def setup_proxy(self, region: Optional[str] = None) -> bool:
         """Setup and validate proxy for the network handler"""
         try:
-            # Ensure proxy manager is initialized
-            if not self.proxy_manager.proxies:
-                await self.proxy_manager.initialize()
-                
-            proxy = await self.proxy_manager.get_working_proxy(region)
+            proxy = await self.proxy_manager.get_working_proxy()
             if proxy:
-                self.current_proxy = proxy
-                logger.info(f"Successfully setup proxy: {proxy.server} ({proxy.region})")
+                self.proxy_manager.current_proxy = proxy
+                # Use standard logging instead of proxy_manager.logger
+                logger.info(f"Successfully setup proxy: {proxy.server}")
                 return True
             else:
                 logger.warning("Failed to find working proxy")
@@ -220,6 +221,6 @@ class NetworkRequestHandler:
 
     def get_proxy_config(self) -> Optional[Dict]:
         """Get current proxy configuration for Playwright"""
-        if self.current_proxy:
-            return self.current_proxy.to_dict()
+        if self.proxy_manager.current_proxy:
+            return self.proxy_manager.current_proxy.to_dict()
         return None 
