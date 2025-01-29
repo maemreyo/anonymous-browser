@@ -57,7 +57,7 @@ FINGERPRINT_CONFIG: Dict[str, Any] = {
     
     # Hardware specifications
     "hardware": {
-        "device_memory": (4, 8, 16, 32),  # Common RAM sizes in GB
+        # "device_memory": (4, 8, 16, 32),  # Common RAM sizes in GB
         "hardware_concurrency": (4, 8, 12, 16),  # CPU threads
         "max_touch_points": (0, ),  # Touch points (0 for desktop)
     },
