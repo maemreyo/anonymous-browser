@@ -7,6 +7,7 @@ from ..utils.display import show_active_config, get_js_config
 from rich.console import Console
 from .network_handler import NetworkRequestHandler
 import logging
+from .media_mock_handler import MediaMockHandler
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ class AnonymousBrowser:
         self.page: Optional[Page] = None
         self.current_config: Optional[Dict[str, Any]] = None
         self.network_handler = NetworkRequestHandler()
+        self.media_mock_handler = MediaMockHandler()
 
     async def launch(self) -> None:
         """Launch browser with network handling"""
@@ -50,6 +52,9 @@ class AnonymousBrowser:
             
             # Enable request/response logging
             self._setup_network_logging()
+            
+            # Setup media mocking
+            await self.media_mock_handler.setup_mocks(self.context)
             
             logger.info("Browser launched with network handling enabled")
 
