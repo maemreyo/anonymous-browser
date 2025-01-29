@@ -7,6 +7,9 @@ import pytz
 from pathlib import Path
 from ..config.spoof_profiles import SpoofingProfiles, TIMEZONE_COORDINATES
 from ..config.geolocation_profiles import GeolocationProfiles, GeoLocation
+from ..config.proxy_profiles import ProxyProfiles
+from .network_handler import NetworkRequestHandler
+from ..config.proxy_manager import ProxyManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,7 @@ class SpooferType(Enum):
     TIMEZONE = "timezone"
     AUDIO = "audio"
     GEOLOCATION = "geolocation"
+    PROXY = "proxy"
 
 class ContextSpoofer:
     """
@@ -22,6 +26,9 @@ class ContextSpoofer:
     def __init__(self):
         self.profiles = SpoofingProfiles()
         self.geo_profiles = GeolocationProfiles()
+        self.proxy_profiles = ProxyProfiles()
+        self.proxy_manager = ProxyManager()
+        self.network_handler = NetworkRequestHandler(proxy_manager=self.proxy_manager)
         self.spoof_configs = self._load_random_config()
         self._validate_configs()
 
@@ -29,10 +36,14 @@ class ContextSpoofer:
         """Load random profile configuration"""
         profile = self.profiles.get_random_profile()
         
-        # Get matching geolocation for timezone
+        # Get matching geolocation and proxy for timezone
         geo_location, timezone, locale = self.geo_profiles.get_random_location(
             profile["timezone"].get("timezone_id")
         )
+        
+        # Get proxy from matching region
+        region = timezone.split('/')[0].upper()
+        proxy = self.proxy_profiles.get_random_proxy(region)
         
         return {
             SpooferType.TIMEZONE.value: profile["timezone"],
@@ -42,6 +53,10 @@ class ContextSpoofer:
                 "location": geo_location.to_dict(),
                 "timezone": timezone,
                 "locale": locale
+            },
+            SpooferType.PROXY.value: {
+                "enabled": True,
+                "config": proxy.to_dict()
             }
         }
 
@@ -58,7 +73,16 @@ class ContextSpoofer:
             raise ValueError("Browser context is not initialized")
 
         try:
+            # Setup proxy first
+            if await self.network_handler.setup_proxy():
+                proxy_config = self.network_handler.get_proxy_config()
+                if proxy_config:
+                    await context.route("**/*", lambda route: route.continue_(
+                        proxy=proxy_config
+                    ))
+
             # Get current configs
+            proxy_config = self.spoof_configs[SpooferType.PROXY.value]
             tz_config = self.spoof_configs[SpooferType.TIMEZONE.value]
             audio_config = self.spoof_configs[SpooferType.AUDIO.value]
             geo_config = self.spoof_configs[SpooferType.GEOLOCATION.value]
@@ -263,11 +287,16 @@ class ContextSpoofer:
                             }
                         })(),
                         
-                        // Network
-                        'Network Info': (() => {
-                            const conn = navigator.connection;
-                            return conn ? `${conn.effectiveType || 'unknown'} (${conn.downlink} Mbps)` : 'N/A';
-                        })(),
+                        // Network & Proxy
+                        'Network': {
+                            'IP Address': window.__SPOOF_CONFIG?.proxy?.ip || 'Direct',
+                            'Proxy Server': window.__SPOOF_CONFIG?.proxy?.server || 'None',
+                            'Proxy Protocol': window.__SPOOF_CONFIG?.proxy?.protocol || 'None',
+                            'Proxy Region': window.__SPOOF_CONFIG?.proxy?.region || 'Unknown',
+                            'Connection Type': navigator.connection?.effectiveType || 'Unknown',
+                            'Downlink Speed': navigator.connection?.downlink ? `${navigator.connection.downlink} Mbps` : 'Unknown',
+                            'RTT': navigator.connection?.rtt ? `${navigator.connection.rtt}ms` : 'Unknown'
+                        },
                         
                         // Spoofed Settings
                         'Spoofed Timezone': window.__SPOOF_CONFIG?.timezone?.timezone_id || 'None',
@@ -290,19 +319,33 @@ class ContextSpoofer:
                     const flatConfig = getFlattenedConfig(config);
                     const maxKeyLength = Math.max(...Object.keys(flatConfig).map(key => key.length));
                     
-                    for (const [key, value] of Object.entries(flatConfig)) {
-                        const paddedKey = key.padEnd(maxKeyLength);
-                        console.log(`${paddedKey} │ ${value}`);
+                    // Group configs by category
+                    const categories = {
+                        'Browser': ['User Agent', 'Platform', 'Language'],
+                        'Network': ['IP Address', 'Proxy', 'Connection'],
+                        'Geolocation': ['Latitude', 'Longitude', 'Timezone'],
+                        'Hardware': ['CPU Cores', 'Memory', 'Screen'],
+                        'Spoofed': ['Spoofed Timezone', 'Spoofed Locale', 'Spoofed Audio']
+                    };
+
+                    for (const [category, keys] of Object.entries(categories)) {
+                        console.log(`\\n[${category}]`);
+                        for (const [key, value] of Object.entries(flatConfig)) {
+                            if (keys.some(k => key.includes(k))) {
+                                console.log(`${key.padEnd(maxKeyLength)} │ ${value}`);
+                            }
+                        }
                     }
                     
-                    console.log('══════════════════════════════════\\n');
+                    console.log('══════════════════════════════════════════\\n');
                 }
 
-                // Store spoof config globally
+                // Store spoof config globally with proxy info
                 window.__SPOOF_CONFIG = {
                     timezone: %s,
                     audio: %s,
-                    geolocation: %s
+                    geolocation: %s,
+                    proxy: %s
                 };
 
                 // Log the configuration
@@ -310,11 +353,38 @@ class ContextSpoofer:
             """ % (
                 json.dumps(self.spoof_configs[SpooferType.TIMEZONE.value]),
                 json.dumps(self.spoof_configs[SpooferType.AUDIO.value]),
-                json.dumps(self.spoof_configs[SpooferType.GEOLOCATION.value])
+                json.dumps(self.spoof_configs[SpooferType.GEOLOCATION.value]),
+                json.dumps({
+                    "server": self.network_handler.current_proxy.server if self.network_handler.current_proxy else None,
+                    "protocol": self.network_handler.current_proxy.protocol.value if self.network_handler.current_proxy else None,
+                    "region": self.network_handler.current_proxy.region if self.network_handler.current_proxy else None,
+                    "ip": await self._get_current_ip(context) if self.network_handler.current_proxy else None
+                })
             ))
 
-            logger.info("Browser configuration logged to console panel")
-            
         except Exception as e:
             logger.error(f"Failed to log browser configuration: {str(e)}")
-            raise 
+            raise
+
+    async def _get_current_ip(self, context) -> Optional[str]:
+        """Get current IP address through proxy"""
+        try:
+            page = await context.new_page()
+            response = await page.goto("https://api.ipify.org?format=json")
+            data = await response.json()
+            await page.close()
+            return data.get("ip")
+        except Exception as e:
+            logger.error(f"Failed to get IP address: {e}")
+            return None
+
+    async def rotate_proxy(self, context, region: Optional[str] = None) -> bool:
+        """Rotate proxy for current context"""
+        if await self.network_handler.rotate_proxy(region):
+            proxy_config = self.network_handler.get_proxy_config()
+            if proxy_config:
+                await context.route("**/*", lambda route: route.continue_(
+                    proxy=proxy_config
+                ))
+                return True
+        return False 

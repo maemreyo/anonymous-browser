@@ -4,6 +4,8 @@ import logging
 import json
 import re
 from playwright.async_api import Route, Request
+from ..config.proxy_manager import ProxyManager, ProxyConfig
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,8 @@ class NetworkRequestHandler:
                  block_trackers: bool = True,
                  block_media: bool = False,  # Don't block media by default
                  block_images: bool = False,  # Don't block images by default
-                 allowed_domains: Optional[Set[str]] = None):
+                 allowed_domains: Optional[Set[str]] = None,
+                 proxy_manager: Optional[ProxyManager] = None):
         self.blocked_resources: List[str] = []
         self.request_filters: Dict[str, Callable] = {}
         self.response_handlers: Dict[str, Callable] = {}
@@ -36,9 +39,21 @@ class NetworkRequestHandler:
         self.block_images = block_images
         self.allowed_domains = allowed_domains or set()
         
+        # Initialize proxy manager
+        self.proxy_manager = proxy_manager or ProxyManager()
+        self.current_proxy = None
+        
+        # Ensure proxy manager is initialized
+        asyncio.create_task(self._ensure_proxy_manager())
+        
         # Initialize default trackers to block if enabled
         if self.block_trackers:
             self._init_tracker_blocklist()
+
+    async def _ensure_proxy_manager(self) -> None:
+        """Ensure proxy manager is initialized with proxies"""
+        if not self.proxy_manager.proxies:
+            await self.proxy_manager.initialize()
 
     def _init_tracker_blocklist(self):
         """Initialize list of trackers to block"""
@@ -179,3 +194,32 @@ class NetworkRequestHandler:
             self.block_media = block_media
         if block_images is not None:
             self.block_images = block_images 
+
+    async def setup_proxy(self, region: Optional[str] = None) -> bool:
+        """Setup and validate proxy for the network handler"""
+        try:
+            # Ensure proxy manager is initialized
+            if not self.proxy_manager.proxies:
+                await self.proxy_manager.initialize()
+                
+            proxy = await self.proxy_manager.get_working_proxy(region)
+            if proxy:
+                self.current_proxy = proxy
+                logger.info(f"Successfully setup proxy: {proxy.server} ({proxy.region})")
+                return True
+            else:
+                logger.warning("Failed to find working proxy")
+                return False
+        except Exception as e:
+            logger.error(f"Error setting up proxy: {e}")
+            return False
+
+    async def rotate_proxy(self, region: Optional[str] = None) -> bool:
+        """Rotate to a new working proxy"""
+        return await self.setup_proxy(region)
+
+    def get_proxy_config(self) -> Optional[Dict]:
+        """Get current proxy configuration for Playwright"""
+        if self.current_proxy:
+            return self.current_proxy.to_dict()
+        return None 
