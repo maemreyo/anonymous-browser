@@ -6,12 +6,14 @@ from datetime import datetime
 import pytz
 from pathlib import Path
 from ..config.spoof_profiles import SpoofingProfiles, TIMEZONE_COORDINATES
+from ..config.geolocation_profiles import GeolocationProfiles, GeoLocation
 
 logger = logging.getLogger(__name__)
 
 class SpooferType(Enum):
     TIMEZONE = "timezone"
     AUDIO = "audio"
+    GEOLOCATION = "geolocation"
 
 class ContextSpoofer:
     """
@@ -19,15 +21,28 @@ class ContextSpoofer:
     """
     def __init__(self):
         self.profiles = SpoofingProfiles()
+        self.geo_profiles = GeolocationProfiles()
         self.spoof_configs = self._load_random_config()
         self._validate_configs()
 
     def _load_random_config(self) -> Dict[str, Dict[str, Any]]:
         """Load random profile configuration"""
         profile = self.profiles.get_random_profile()
+        
+        # Get matching geolocation for timezone
+        geo_location, timezone, locale = self.geo_profiles.get_random_location(
+            profile["timezone"].get("timezone_id")
+        )
+        
         return {
             SpooferType.TIMEZONE.value: profile["timezone"],
-            SpooferType.AUDIO.value: profile["audio"]
+            SpooferType.AUDIO.value: profile["audio"],
+            SpooferType.GEOLOCATION.value: {
+                "enabled": True,
+                "location": geo_location.to_dict(),
+                "timezone": timezone,
+                "locale": locale
+            }
         }
 
     def _validate_configs(self) -> None:
@@ -43,12 +58,18 @@ class ContextSpoofer:
             raise ValueError("Browser context is not initialized")
 
         try:
-            # Get current config
-            tz_config = self.spoof_configs["timezone"]
-            audio_config = self.spoof_configs["audio"]
+            # Get current configs
+            tz_config = self.spoof_configs[SpooferType.TIMEZONE.value]
+            audio_config = self.spoof_configs[SpooferType.AUDIO.value]
+            geo_config = self.spoof_configs[SpooferType.GEOLOCATION.value]
 
+            # Setup geolocation if enabled
+            if geo_config["enabled"]:
+                await context.grant_permissions(['geolocation'])
+                await context.set_geolocation(geo_config["location"])
+
+            # Setup timezone spoofing (existing code)
             if tz_config["enabled"]:
-                # Set timezone and locale using context options
                 await context.set_extra_http_headers({
                     "Accept-Language": tz_config["locale"]
                 })
@@ -58,13 +79,6 @@ class ContextSpoofer:
                     tz_config["timezone_id"], 
                     (0, 0)  # Default to Greenwich
                 )
-
-                # Set geolocation
-                await context.grant_permissions(['geolocation'])
-                await context.set_geolocation({
-                    "latitude": lat,
-                    "longitude": lng
-                })
 
                 # Inject timezone spoofing script
                 await context.add_init_script(f"""
@@ -98,6 +112,7 @@ class ContextSpoofer:
                     }};
                 """)
 
+            # Setup audio spoofing (existing code)
             if audio_config["enabled"]:
                 # Setup audio context
                 await context.add_init_script(f"""
@@ -125,7 +140,7 @@ class ContextSpoofer:
                     }};
                 """)
 
-            # Log configuration to console
+            # Update browser logging to include geolocation
             await self.log_browser_config(context)
             
             logger.info("Context spoofing setup complete")
@@ -135,17 +150,12 @@ class ContextSpoofer:
             raise
 
     def configure_spoof(self, spoof_type: str, config: Dict[str, Any]) -> None:
-        """Configure spoofing with validation"""
+        """Configure specific spoof settings"""
         if spoof_type not in self.spoof_configs:
             raise ValueError(f"Invalid spoof type: {spoof_type}")
             
-        if spoof_type == SpooferType.TIMEZONE.value:
-            self._validate_timezone_config(config)
-        elif spoof_type == SpooferType.AUDIO.value:
-            self._validate_audio_config(config)
-            
         self.spoof_configs[spoof_type].update(config)
-        logger.debug(f"Updated {spoof_type} configuration: {config}")
+        logger.debug(f"Updated {spoof_type} spoof configuration: {config}")
 
     def _validate_timezone_config(self, config: Dict[str, Any]) -> None:
         """Validate timezone configuration"""
@@ -172,14 +182,24 @@ class ContextSpoofer:
     def randomize_config(self, device_type: str = None) -> None:
         """Randomize current configuration"""
         profile = self.profiles.get_random_profile(device_type)
+        geo_location, timezone, locale = self.geo_profiles.get_random_location(
+            profile["timezone"].get("timezone_id")
+        )
+        
         self.spoof_configs = {
             SpooferType.TIMEZONE.value: profile["timezone"],
-            SpooferType.AUDIO.value: profile["audio"]
+            SpooferType.AUDIO.value: profile["audio"],
+            SpooferType.GEOLOCATION.value: {
+                "enabled": True,
+                "location": geo_location.to_dict(),
+                "timezone": timezone,
+                "locale": locale
+            }
         }
-        self._validate_configs() 
+        self._validate_configs()
 
     async def log_browser_config(self, context) -> None:
-        """Log all browser configurations to console panel in a simplified 2-column format"""
+        """Log all browser configurations to console panel"""
         try:
             await context.add_init_script("""
                 function getFlattenedConfig(obj, prefix = '') {
@@ -254,7 +274,14 @@ class ContextSpoofer:
                         'Spoofed Locale': window.__SPOOF_CONFIG?.timezone?.locale || 'None',
                         'Spoofed Audio Rate': window.__SPOOF_CONFIG?.audio?.sample_rate 
                             ? `${window.__SPOOF_CONFIG.audio.sample_rate} Hz` 
-                            : 'None'
+                            : 'None',
+                        
+                        // Add Geolocation section
+                        'Geolocation': {
+                            'Latitude': window.__SPOOF_CONFIG?.geolocation?.location?.latitude || 'None',
+                            'Longitude': window.__SPOOF_CONFIG?.geolocation?.location?.longitude || 'None',
+                            'Accuracy': window.__SPOOF_CONFIG?.geolocation?.location?.accuracy || 'None'
+                        }
                     };
 
                     console.log('\\n=== 🌐 Browser Configuration ===');
@@ -274,14 +301,16 @@ class ContextSpoofer:
                 // Store spoof config globally
                 window.__SPOOF_CONFIG = {
                     timezone: %s,
-                    audio: %s
+                    audio: %s,
+                    geolocation: %s
                 };
 
                 // Log the configuration
                 logBrowserConfig();
             """ % (
-                json.dumps(self.spoof_configs["timezone"]),
-                json.dumps(self.spoof_configs["audio"])
+                json.dumps(self.spoof_configs[SpooferType.TIMEZONE.value]),
+                json.dumps(self.spoof_configs[SpooferType.AUDIO.value]),
+                json.dumps(self.spoof_configs[SpooferType.GEOLOCATION.value])
             ))
 
             logger.info("Browser configuration logged to console panel")

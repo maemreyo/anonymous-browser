@@ -31,12 +31,12 @@ x Custom header generation rules
 ### 2. Advanced Evasion Techniques
 x Automatic network request handling
 - Dialog automation
-- WebRTC/Canvas/WebGL mocking
-- Timezone and audio context spoofing
+x WebRTC/Canvas/WebGL mocking
+x Timezone and audio context spoofing
 
 ### 3. Enhanced Device Emulation
 - Complete mobile device emulation
-- Geolocation spoofing
+x Geolocation spoofing
 - Permission management
 - Color scheme emulation
 - Device orientation simulation
