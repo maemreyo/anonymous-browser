@@ -4,7 +4,9 @@ from browserforge.headers import HeaderGenerator, Browser
 from ..config.device_specs import DeviceProfileManager, DeviceType, BrowserFamily
 from ..config.locale_specs import LocaleManager
 from ..config.header_rules import HeaderRuleManager
+from .network_handler import NetworkRequestHandler
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +48,44 @@ class AnonymousFingerprint:
         )
         
         self.header_manager = HeaderRuleManager()
+        self.network_handler = NetworkRequestHandler()
 
-    def generate(
+    async def setup_browser_context(self, context) -> None:
+        """Setup browser context with network handling"""
+        # Setup network interception
+        await self.network_handler.setup_request_interception(context)
+        
+        # Add custom request filters
+        self.network_handler.add_request_filter(
+            r".*api\.example\.com.*",
+            self._modify_api_request
+        )
+        
+        # Block unnecessary resources
+        self.network_handler.block_resource([
+            "analytics",
+            "advertising",
+            "tracking"
+        ])
+
+    def _modify_api_request(self, request) -> Dict[str, Any]:
+        """Example custom request modifier"""
+        headers = request.headers
+        # Add custom headers
+        headers.update({
+            "X-Custom-Header": "value",
+            "X-Request-ID": str(uuid.uuid4())
+        })
+        return {"headers": headers}
+
+    async def generate(
         self,
         device_type: Optional[str] = None,
         preferred_locale: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Generate fingerprint with specific device type and locale"""
+        """Generate fingerprint asynchronously"""
         try:
             device_config = self.device_manager.get_device_config(device_type)
-            
             locale_config = self.locale_manager.get_locale_config(
                 browser=device_config["browser"]["family"],
                 device_type=device_config["device_type"],
@@ -67,19 +97,24 @@ class AnonymousFingerprint:
                 browser=device_config["browser"]["family"]
             )
             
-            # Generate headers with custom rules
+            # Generate headers
             headers = self.header_manager.generate_headers(
                 browser=device_config["browser"]["family"],
-                version=device_config["browser"].get("version"),
-                include_security=True
+                version=device_config["browser"].get("version")
             )
             
             return {
-                "fingerprint": fingerprint,
+                "fingerprint": {
+                    "userAgent": headers.get("User-Agent", ""),
+                    "viewport": {
+                        "width": device_config["screen"]["width_range"][0],
+                        "height": device_config["screen"]["height_range"][0]
+                    }
+                },
                 "headers": headers,
                 "locale_info": locale_config
             }
-
+            
         except Exception as e:
             logger.error(f"Failed to generate fingerprint: {str(e)}")
             raise

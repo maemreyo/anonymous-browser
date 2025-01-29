@@ -5,9 +5,11 @@ from .fingerprint_generator import AnonymousFingerprint
 from ..utils.logger import setup_logger
 from ..utils.display import show_active_config, get_js_config
 from rich.console import Console
+from .network_handler import NetworkRequestHandler
+import logging
 
 console = Console()
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AnonymousBrowser:
@@ -17,62 +19,86 @@ class AnonymousBrowser:
         self.context = None
         self.page: Optional[Page] = None
         self.current_config: Optional[Dict[str, Any]] = None
+        self.network_handler = NetworkRequestHandler()
 
     async def launch(self) -> None:
-        """Launch a new browser instance with random fingerprint"""
+        """Launch browser with network handling"""
         try:
-            config = self.fingerprint_generator.generate()
+            # Await the generate coroutine
+            config = await self.fingerprint_generator.generate()
             self.current_config = config["fingerprint"]
-            
+
+            console.print("\n[bold yellow]Launching browser with configuration:[/]")
+            self._show_active_config()
+
             playwright = await async_playwright().start()
-            
-            # Enhanced browser launch options
-            browser_options = {
-                "headless": False,
-                "proxy": None,  # Add proxy support if needed
-                "args": [
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                    "--disable-site-isolation-trials",
-                    "--disable-web-security",
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox"
-                ]
-            }
-            
-            self.browser = await playwright.firefox.launch(**browser_options)
-            
-            # Enhanced context options
-            context_options = {
-                "viewport": {
-                    "width": self.current_config.screen.width,
-                    "height": self.current_config.screen.height
-                },
-                "user_agent": self.current_config.navigator.userAgent,
-                "locale": self.current_config.navigator.language,
-                # "timezone_id": self.current_config.navigator.timezone,
-                "permissions": ["geolocation", "notifications"],
-                "bypass_csp": True,
-                "ignore_https_errors": True
-            }
-            
-            self.context = await AsyncNewContext(
-                self.browser,
-                fingerprint=self.current_config,
-                **context_options
+            self.browser = await playwright.firefox.launch(headless=False)
+
+            # Create context with network handling
+            self.context = await self.browser.new_context(
+                viewport=self.current_config["viewport"],
+                user_agent=self.current_config["userAgent"]
             )
             
+            # Setup network monitoring
+            await self.network_handler.setup_request_interception(self.context)
+            
+            # Add default network handlers
+            self._setup_default_handlers()
+
             self.page = await self.context.new_page()
             
-            # Add additional evasion scripts
-            await self._inject_evasion_scripts()
+            # Enable request/response logging
+            self._setup_network_logging()
             
-            logger.info("Browser launched successfully with new fingerprint")
+            logger.info("Browser launched with network handling enabled")
 
         except Exception as e:
             logger.error(f"Failed to launch browser: {str(e)}")
             raise
+
+    def _show_active_config(self) -> None:
+        """Show active browser configuration"""
+        if self.current_config:
+            console.print(f"User Agent: {self.current_config.get('userAgent', 'N/A')}")
+            console.print(f"Viewport: {self.current_config.get('viewport', 'N/A')}")
+
+    def _setup_default_handlers(self) -> None:
+        """Setup default network handlers"""
+        # Block common trackers
+        self.network_handler.block_resource([
+            "google-analytics.com",
+            "doubleclick.net",
+            "facebook.com/tr",
+            "analytics"
+        ])
+        
+        # Log all API calls
+        self.network_handler.add_request_filter(
+            r".*api.*",
+            self._log_api_request
+        )
+
+    def _setup_network_logging(self) -> None:
+        """Setup network request/response logging"""
+        if self.page:
+            self.page.on("request", self._handle_request)
+            self.page.on("response", self._handle_response)
+
+    async def _handle_request(self, request) -> None:
+        """Log network requests"""
+        console.print(f"[dim blue]Request:[/] {request.method} {request.url}")
+
+    async def _handle_response(self, response) -> None:
+        """Log network responses"""
+        status = response.status
+        color = "green" if 200 <= status < 300 else "red"
+        console.print(f"[{color}]Response:[/] {status} {response.url}")
+
+    def _log_api_request(self, request) -> Optional[Dict[str, Any]]:
+        """Log API requests"""
+        console.print(f"[yellow]API Request:[/] {request.method} {request.url}")
+        return None
 
     async def inject_config_display(self) -> None:
         """Inject configuration display with all info and toggle button"""
