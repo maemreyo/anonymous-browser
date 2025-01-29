@@ -3,6 +3,7 @@ from browserforge.fingerprints import FingerprintGenerator, Screen
 from browserforge.headers import HeaderGenerator, Browser
 from ..config.device_specs import DeviceProfileManager, DeviceType, BrowserFamily
 from ..config.locale_specs import LocaleManager
+from ..config.header_rules import HeaderRuleManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ class AnonymousFingerprint:
             mock_webrtc=True,
             slim=False
         )
+        
+        self.header_manager = HeaderRuleManager()
 
     def generate(
         self,
@@ -59,18 +62,16 @@ class AnonymousFingerprint:
                 preferred_locale=preferred_locale
             )
             
-            # Generate fingerprint with locale settings
+            # Generate fingerprint
             fingerprint = self.fingerprint_generator.generate(
                 browser=device_config["browser"]["family"]
             )
             
-            # Generate headers with locale settings
-            headers = self.header_generator.generate(
+            # Generate headers with custom rules
+            headers = self.header_manager.generate_headers(
                 browser=device_config["browser"]["family"],
-                os=device_config["os"],
-                device=device_config["device_type"],
-                locale=locale_config["locale"],
-                http_version=locale_config["http_version"]
+                version=device_config["browser"].get("version"),
+                include_security=True
             )
             
             return {
