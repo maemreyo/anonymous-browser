@@ -51,8 +51,8 @@ class AnonymousBrowser:
                 },
                 "user_agent": self.current_config.navigator.userAgent,
                 "locale": self.current_config.navigator.language,
-                "timezone_id": self.current_config.navigator.timezone,
-                "permissions": ["geolocation", "notifications", "camera", "microphone"],
+                # "timezone_id": self.current_config.navigator.timezone,
+                "permissions": ["geolocation", "notifications"],
                 "bypass_csp": True,
                 "ignore_https_errors": True
             }

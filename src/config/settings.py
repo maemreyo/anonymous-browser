@@ -33,8 +33,8 @@ BROWSER_SPECS = [
 # Browser configuration
 BROWSER_CONFIG: Dict[str, Union[List[Browser], Tuple[str, ...], str, int]] = {
     "browser": BROWSER_SPECS,
-    "os": ("windows", "macos", "linux", "android", "ios"),
-    "device": ("desktop", "mobile", "tablet"),
+    "os": ("windows", "macos", "linux"),
+    "device": ("desktop"),
     "locale": ("en-US", "en-GB", "de-DE", "fr-FR", "es-ES", "ja-JP", "zh-CN"),
     "http_version": 2,
 }
@@ -59,7 +59,7 @@ FINGERPRINT_CONFIG: Dict[str, Any] = {
     "hardware": {
         "device_memory": (4, 8, 16, 32),  # Common RAM sizes in GB
         "hardware_concurrency": (4, 8, 12, 16),  # CPU threads
-        "max_touch_points": (0, 5, 10),  # Touch points (0 for desktop)
+        "max_touch_points": (0, ),  # Touch points (0 for desktop)
     },
     
     # Media devices configuration
