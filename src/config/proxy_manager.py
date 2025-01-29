@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List, Set
+from typing import Dict, Any, Optional, List, Protocol
 from dataclasses import dataclass
 import aiohttp
 import logging
@@ -7,13 +7,14 @@ import json
 from pathlib import Path
 import random
 from datetime import datetime, timedelta
+from abc import ABC, abstractmethod
+import asyncio
 from rich.console import Console
 from rich.table import Table
-import asyncio
-import aiofiles
 
 console = Console()
 logger = logging.getLogger(__name__)
+
 
 class ProxyProtocol(Enum):
     HTTP = "http"
@@ -21,13 +22,26 @@ class ProxyProtocol(Enum):
     SOCKS4 = "socks4"
     SOCKS5 = "socks5"
 
+    @classmethod
+    def guess_from_port(cls, port: int) -> "ProxyProtocol":
+        """Guess protocol from port number"""
+        if port in [1080, 4145, 4153]:
+            return cls.SOCKS5
+        elif port in [1081, 4144]:
+            return cls.SOCKS4
+        elif port in [8080, 8888, 3128]:
+            return cls.HTTP
+        else:
+            return cls.HTTP  # Default to HTTP
+
+
 @dataclass
 class ProxyConfig:
     server: str
     protocol: ProxyProtocol
-    username: Optional[str] = None
-    password: Optional[str] = None
-    region: Optional[str] = None
+    username: Optional[str] = ""
+    password: Optional[str] = ""
+    region: Optional[str] = ""
     last_checked: Optional[datetime] = None
     response_time: Optional[float] = None
 
@@ -38,161 +52,241 @@ class ProxyConfig:
             "username": self.username,
             "password": self.password,
             "region": self.region,
-            "last_checked": self.last_checked.isoformat() if self.last_checked else None,
-            "response_time": self.response_time
+            "last_checked": (
+                self.last_checked.isoformat() if self.last_checked else None
+            ),
+            "response_time": self.response_time,
         }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ProxyConfig':
-        return cls(
-            server=data['server'],
-            protocol=ProxyProtocol[data['protocol'].upper()],
-            username=data.get('username'),
-            password=data.get('password'),
-            region=data.get('region'),
-            last_checked=datetime.fromisoformat(data['last_checked']) if data.get('last_checked') else None,
-            response_time=data.get('response_time')
-        )
 
     def __str__(self) -> str:
         return f"{self.protocol.value}://{self.server}"
 
+
+class ProxyAdapter(ABC):
+    """Base adapter for proxy data sources"""
+
+    @abstractmethod
+    def adapt(self, data: Dict[str, Any]) -> Optional[ProxyConfig]:
+        """Convert source data to ProxyConfig"""
+        pass
+
+
+class StandardProxyAdapter(ProxyAdapter):
+    """Adapter for standard proxy format with protocol list"""
+
+    def adapt(self, data: Dict[str, Any]) -> Optional[ProxyConfig]:
+        try:
+            protocol = data.get("protocol", ["http"])[0].upper()
+            return ProxyConfig(
+                server=f"{data['ip']}:{data['port']}",
+                protocol=ProxyProtocol[protocol],
+                username=data.get("username", ""),
+                password=data.get("password", ""),
+            )
+        except Exception as e:
+            logger.error(f"Failed to adapt standard proxy: {e}")
+            return None
+
+
+class RawProxyAdapter(ProxyAdapter):
+    """Adapter for raw proxy format with ip_address and port"""
+
+    def adapt(self, data: Dict[str, Any]) -> Optional[ProxyConfig]:
+        try:
+            port = int(data["port"])
+            protocol = ProxyProtocol.guess_from_port(port)
+            return ProxyConfig(server=f"{data['ip_address']}:{port}", protocol=protocol)
+        except Exception as e:
+            logger.error(f"Failed to adapt raw proxy: {e}")
+            return None
+
+
+class WorkingProxyAdapter(ProxyAdapter):
+    """Adapter for working proxies format"""
+
+    def adapt(self, data: Dict[str, Any]) -> Optional[ProxyConfig]:
+        try:
+            return ProxyConfig(
+                server=data["server"],
+                protocol=ProxyProtocol[data["protocol"].upper()],
+                username=data.get("username", ""),
+                password=data.get("password", ""),
+                region=data.get("region"),
+                last_checked=(
+                    datetime.fromisoformat(data["last_checked"])
+                    if data.get("last_checked")
+                    else None
+                ),
+                response_time=data.get("response_time"),
+            )
+        except Exception as e:
+            logger.error(f"Failed to adapt working proxy: {e}")
+            return None
+
+
 class ProxyManager:
-    def __init__(self, proxy_file: str = "config/proxies.json", working_proxies_file: str = "config/working_proxies.json"):
-        self.current_proxy = None
+    def __init__(
+        self,
+        proxy_file: str = "config/proxies.json",
+        raw_proxy_file: str = "config/raw_proxies.json",
+        working_proxies_file: str = "config/working_proxies.json",
+    ):
         self.proxy_file = Path(proxy_file)
+        self.raw_proxy_file = Path(raw_proxy_file)
         self.working_proxies_file = Path(working_proxies_file)
+
+        self.adapters = {
+            "standard": StandardProxyAdapter(),
+            "raw": RawProxyAdapter(),
+            "working": WorkingProxyAdapter(),
+        }
+
         self.proxies: List[ProxyConfig] = []
         self.working_proxies: List[ProxyConfig] = []
-        self._load_proxies()
-        self._load_working_proxies()
+        self.current_proxy = None
+
+        self._load_all_proxies()
         self._display_proxy_status()
 
-    def _load_proxies(self) -> None:
-        """Load proxies from JSON file"""
+    def _load_all_proxies(self) -> None:
+        """Load proxies from all sources"""
+        # Load raw proxies
+        if self.raw_proxy_file.exists():
+            console.print(
+                f"[blue]Loading raw proxies from {self.raw_proxy_file}[/blue]"
+            )
+            raw_proxies = self._load_from_file(self.raw_proxy_file, "raw")
+            self.proxies.extend(raw_proxies)
+            console.print(f"[green]Loaded {len(raw_proxies)} raw proxies[/green]")
+
+        # Load standard proxies
+        if self.proxy_file.exists():
+            console.print(
+                f"[blue]Loading standard proxies from {self.proxy_file}[/blue]"
+            )
+            std_proxies = self._load_from_file(self.proxy_file, "standard")
+            self.proxies.extend(std_proxies)
+            console.print(f"[green]Loaded {len(std_proxies)} standard proxies[/green]")
+
+        # Load working proxies
+        if self.working_proxies_file.exists():
+            console.print(
+                f"[blue]Loading working proxies from {self.working_proxies_file}[/blue]"
+            )
+            working_proxies = self._load_from_file(self.working_proxies_file, "working")
+            # Filter out expired proxies
+            now = datetime.now()
+            working_proxies = [
+                p
+                for p in working_proxies
+                if p.last_checked and now - p.last_checked < timedelta(hours=1)
+            ]
+            self.working_proxies.extend(working_proxies)
+            console.print(
+                f"[green]Loaded {len(working_proxies)} working proxies[/green]"
+            )
+
+    def _load_from_file(self, file_path: Path, adapter_type: str) -> List[ProxyConfig]:
+        """Load proxies from a file using specified adapter"""
         try:
-            if not self.proxy_file.exists():
-                console.print(f"[red]Error: Proxy file not found at {self.proxy_file}[/red]")
-                return
+            with open(file_path) as f:
+                data = json.load(f)
 
-            with open(self.proxy_file) as f:
-                proxy_list = json.load(f)
+            adapter = self.adapters[adapter_type]
+            proxies = []
 
-            for proxy_data in proxy_list:
-                try:
-                    protocol = proxy_data['protocol'][0].upper()
-                    if not hasattr(ProxyProtocol, protocol):
-                        continue
+            for item in data:
+                proxy = adapter.adapt(item)
+                if proxy:
+                    proxies.append(proxy)
 
-                    proxy = ProxyConfig(
-                        server=f"{proxy_data['ip']}:{proxy_data['port']}",
-                        protocol=ProxyProtocol[protocol],
-                        username=proxy_data.get('username'),
-                        password=proxy_data.get('password')
+            return proxies
+
+        except Exception as e:
+            logger.error(f"Failed to load proxies from {file_path}: {e}")
+            return []
+
+    def _display_proxy_status(self) -> None:
+        """Display current proxy status"""
+        table = Table(title="Proxy Status")
+        table.add_column("Type", style="cyan")
+        table.add_column("Protocol", style="magenta")
+        table.add_column("Server", style="green")
+        table.add_column("Response Time", style="yellow")
+        table.add_column("Status", style="blue")
+
+        # Add working proxies
+        for proxy in self.working_proxies:
+            response_time = (
+                f"{proxy.response_time:.0f}ms" if proxy.response_time else "N/A"
+            )
+            status = "Current" if proxy == self.current_proxy else "Working"
+            table.add_row(
+                "Working", proxy.protocol.value, proxy.server, response_time, status
+            )
+
+        # Add untested proxies
+        for proxy in self.proxies[:5]:  # Show only first 5 untested proxies
+            table.add_row(
+                "Untested", proxy.protocol.value, proxy.server, "N/A", "Pending"
+            )
+
+        console.print(table)
+
+    async def get_working_proxy(self) -> Optional[ProxyConfig]:
+        """Get a working proxy from the list"""
+        if not self.proxies:
+            logger.warning("No proxies available")
+            return None
+
+        # Try proxies in random order
+        proxies = self.proxies.copy()
+        random.shuffle(proxies)
+
+        for proxy in proxies:
+            try:
+                if await self._validate_proxy(proxy):
+                    self.current_proxy = proxy
+                    logger.info(
+                        f"Found working proxy: {proxy.server} ({proxy.protocol.value})"
                     )
-                    self.proxies.append(proxy)
-                except Exception as e:
-                    logger.error(f"Failed to parse proxy: {proxy_data} - {e}")
-                    continue
+                    return proxy
+            except Exception as e:
+                logger.debug(f"Failed to validate proxy {proxy.server}: {e}")
+                continue
 
-        except Exception as e:
-            logger.error(f"Failed to load proxies: {e}")
-            raise
-
-    def _load_working_proxies(self) -> None:
-        """Load working proxies from cache file"""
-        try:
-            if self.working_proxies_file.exists():
-                with open(self.working_proxies_file) as f:
-                    data = json.load(f)
-                    self.working_proxies = [ProxyConfig.from_dict(p) for p in data]
-                    # Remove expired proxies (older than 1 hour)
-                    now = datetime.now()
-                    self.working_proxies = [
-                        p for p in self.working_proxies 
-                        if p.last_checked and now - p.last_checked < timedelta(hours=1)
-                    ]
-        except Exception as e:
-            logger.error(f"Failed to load working proxies: {e}")
-
-    async def _save_working_proxies(self) -> None:
-        """Save working proxies to cache file"""
-        try:
-            self.working_proxies_file.parent.mkdir(parents=True, exist_ok=True)
-            async with aiofiles.open(self.working_proxies_file, 'w') as f:
-                data = [p.to_dict() for p in self.working_proxies]
-                await f.write(json.dumps(data, indent=2))
-        except Exception as e:
-            logger.error(f"Failed to save working proxies: {e}")
+        logger.warning("No working proxy found")
+        return None
 
     async def _validate_proxy(self, proxy: ProxyConfig) -> bool:
         """Validate if proxy is working"""
         try:
             connector = aiohttp.TCPConnector(ssl=False)
-            timeout = aiohttp.ClientTimeout(total=5)  # Reduced timeout
-            
-            async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+            timeout = aiohttp.ClientTimeout(total=10)
+
+            async with aiohttp.ClientSession(
+                connector=connector, timeout=timeout
+            ) as session:
                 start_time = datetime.now()
                 async with session.get(
-                    'http://example.com',
+                    "http://example.com",
                     proxy=f"{proxy.protocol.value}://{proxy.server}",
-                    proxy_auth=aiohttp.BasicAuth(proxy.username, proxy.password) if proxy.username else None
+                    proxy_auth=(
+                        aiohttp.BasicAuth(proxy.username, proxy.password)
+                        if proxy.username
+                        else None
+                    ),
                 ) as response:
                     if response.status == 200:
-                        proxy.response_time = (datetime.now() - start_time).total_seconds() * 1000
+                        proxy.response_time = (
+                            datetime.now() - start_time
+                        ).total_seconds() * 1000
                         proxy.last_checked = datetime.now()
                         return True
-        except:
-            pass
+
+        except Exception as e:
+            logger.debug(f"Proxy validation failed: {e}")
         return False
-
-    async def _check_proxies_parallel(self, proxies: List[ProxyConfig], max_concurrent: int = 10) -> List[ProxyConfig]:
-        """Check multiple proxies in parallel"""
-        working = []
-        tasks = []
-        
-        async def check_proxy(proxy):
-            if await self._validate_proxy(proxy):
-                working.append(proxy)
-                console.print(f"[green]Found working proxy: {proxy} ({proxy.response_time:.0f}ms)[/green]")
-
-        # Create chunks of proxies to check
-        chunks = [proxies[i:i + max_concurrent] for i in range(0, len(proxies), max_concurrent)]
-        
-        for chunk in chunks:
-            tasks = [check_proxy(proxy) for proxy in chunk]
-            await asyncio.gather(*tasks)
-            
-        return working
-
-    async def get_working_proxy(self) -> Optional[ProxyConfig]:
-        """Get a working proxy"""
-        # First check existing working proxies
-        if self.working_proxies:
-            self.working_proxies.sort(key=lambda p: p.response_time or float('inf'))
-            for proxy in self.working_proxies[:3]:  # Try top 3 fastest
-                if await self._validate_proxy(proxy):
-                    self.current_proxy = proxy
-                    return proxy
-            
-            # Remove non-working proxies
-            self.working_proxies = []
-
-        # Check new proxies in parallel
-        console.print("[blue]Testing proxies in parallel...[/blue]")
-        working_proxies = await self._check_proxies_parallel(self.proxies)
-        
-        if working_proxies:
-            # Sort by response time
-            working_proxies.sort(key=lambda p: p.response_time or float('inf'))
-            self.working_proxies = working_proxies
-            self.current_proxy = working_proxies[0]
-            await self._save_working_proxies()
-            self._display_proxy_status()
-            return self.current_proxy
-
-        console.print("[red]No working proxy found[/red]")
-        return None
 
     def get_proxy_config(self) -> Optional[Dict[str, Any]]:
         """Get current proxy configuration for Playwright"""
@@ -200,24 +294,6 @@ class ProxyManager:
             return {
                 "server": f"{self.current_proxy.protocol.value}://{self.current_proxy.server}",
                 "username": self.current_proxy.username,
-                "password": self.current_proxy.password
+                "password": self.current_proxy.password,
             }
         return None
-
-    def _display_proxy_status(self) -> None:
-        """Display proxy status"""
-        table = Table(title="Proxy Status")
-        table.add_column("Server")
-        table.add_column("Protocol")
-        table.add_column("Response Time (ms)")
-        table.add_column("Last Checked")
-
-        for proxy in self.working_proxies:
-            table.add_row(
-                proxy.server,
-                proxy.protocol.value,
-                f"{proxy.response_time:.0f}" if proxy.response_time else "N/A",
-                proxy.last_checked.isoformat() if proxy.last_checked else "N/A"
-            )
-
-        console.print(table) 
