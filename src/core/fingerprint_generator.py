@@ -1,9 +1,7 @@
 from typing import Optional, Dict, Any
 from browserforge.fingerprints import FingerprintGenerator, Screen
 from browserforge.headers import HeaderGenerator, Browser
-from ..config.settings import BROWSER_CONFIG, SCREEN_CONFIG
-from ..config.browser_specs import BROWSER_SPECIFICATIONS
-import random
+from ..config.device_specs import DeviceProfileManager, DeviceType, BrowserFamily
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,78 +9,68 @@ logger = logging.getLogger(__name__)
 
 class AnonymousFingerprint:
     def __init__(self) -> None:
-        self.screen = Screen(
-            min_width=SCREEN_CONFIG["min_width"],
-            max_width=SCREEN_CONFIG["max_width"],
-            min_height=SCREEN_CONFIG["min_height"],
-            max_height=SCREEN_CONFIG["max_height"]
+        self.device_manager = DeviceProfileManager(default_device_type=DeviceType.DESKTOP)
+        
+        # Get default configuration (Desktop Firefox)
+        self.default_config = self.device_manager.get_device_config(
+            browser_family=BrowserFamily.FIREFOX
         )
         
-        # Create browser specifications
-        self.browsers = [
-            Browser(
-                name=browser_name,
-                min_version=specs["min_version"],
-                max_version=specs["max_version"],
-                http_version=specs["http_version"]
-            )
-            for browser_name, specs in BROWSER_SPECIFICATIONS.items()
-        ]
+        self.screen = Screen(
+            min_width=self.default_config["screen"]["width_range"][0],
+            max_width=self.default_config["screen"]["width_range"][1],
+            min_height=self.default_config["screen"]["height_range"][0],
+            max_height=self.default_config["screen"]["height_range"][1]
+        )
         
-        # Initialize generators with more relaxed constraints
+        browser = Browser(
+            name=self.default_config["browser"]["family"],
+            min_version=self.default_config["browser"]["min_version"],
+            max_version=self.default_config["browser"]["max_version"]
+        )
+        
         self.header_generator = HeaderGenerator(
-            browser=self.browsers,  # Pass browser specifications
-            os=BROWSER_CONFIG["os"],
-            device=BROWSER_CONFIG["device"],
-            locale=BROWSER_CONFIG["locale"],
-            http_version=2,
-            strict=False  # Relax constraints
+            browser=browser,
+            os=self.default_config["os"],
+            device=self.default_config["device_type"],
+            strict=False
         )
         
         self.fingerprint_generator = FingerprintGenerator(
             screen=self.screen,
-            strict=False,  # Relax constraints
+            strict=False,
             mock_webrtc=True,
             slim=False
         )
 
-    def generate(self) -> Dict[str, Any]:
-        """Generate a new anonymous fingerprint configuration with retry logic"""
-        max_retries = 3
-        current_try = 0
+    def generate(self, device_type: Optional[str] = None) -> Dict[str, Any]:
+        """Generate fingerprint with specific device type"""
+        try:
+            # Get device configuration
+            device_config = self.device_manager.get_device_config(device_type)
+            
+            if not self.device_manager.validate_config(device_config):
+                raise ValueError("Invalid device configuration")
+                
+            # Generate fingerprint with device-specific settings
+            fingerprint = self.fingerprint_generator.generate(
+                browser=device_config["browser"]["family"]
+            )
+            
+            # Generate matching headers
+            headers = self.header_generator.generate(
+                browser=device_config["browser"]["family"],
+                os=device_config["os"],
+                device=device_config["device_type"]
+            )
+            
+            logger.debug(f"Generated fingerprint for {device_config['device_type']}")
+            
+            return {
+                "fingerprint": fingerprint,
+                "headers": headers
+            }
 
-        while current_try < max_retries:
-            try:
-                # Select a random browser specification
-                selected_browser = random.choice(self.browsers)
-                
-                # Generate headers first
-                headers = self.header_generator.generate(
-                    browser=selected_browser,
-                    strict=False
-                )
-                
-                # Use the same browser settings for fingerprint
-                fingerprint = self.fingerprint_generator.generate(
-                    browser=selected_browser.name,
-                    # Remove device_memory and hardware_concurrency
-                )
-                
-                logger.debug(f"Successfully generated fingerprint for {selected_browser.name}")
-                
-                return {
-                    "fingerprint": fingerprint,
-                    "headers": headers
-                }
-
-            except ValueError as e:
-                current_try += 1
-                logger.warning(f"Attempt {current_try}/{max_retries} failed: {str(e)}")
-                
-                if current_try >= max_retries:
-                    logger.error("Failed to generate valid fingerprint after max retries")
-                    raise
-
-            except Exception as e:
-                logger.error(f"Unexpected error: {str(e)}")
-                raise
+        except Exception as e:
+            logger.error(f"Failed to generate fingerprint: {str(e)}")
+            raise
